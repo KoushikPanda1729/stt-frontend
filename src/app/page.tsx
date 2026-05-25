@@ -2,6 +2,15 @@
 
 import { useState, useRef, DragEvent } from "react";
 
+const MODEL_FEATURES: Record<string, string[]> = {
+  google:         ["Auto-detect"],
+  groq:           ["Timestamps", "Segments"],
+  "meta-mms":     ["Open-source"],
+  speechmatics:   ["Batch API"],
+  modulate:       ["Speaker Labels", "Diarization"],
+  "whisper-local":["Timestamps", "Segments", "Translation"],
+};
+
 const MODELS = {
   google: {
     name: "Google Chirp 2",
@@ -278,13 +287,16 @@ function parseError(msg: string): { type: "unsupported" | "generic"; text: strin
     lower.includes("not supported") ||
     lower.includes("unsupported language") ||
     lower.includes("languagepack") ||
-    lower.includes("invalid language")
+    lower.includes("invalid language") ||
+    lower.includes("invalid choice") ||
+    lower.includes("'st'") ||
+    lower.includes("\"st\"")
   ) {
     return { type: "unsupported", text: "Language not supported by this model" };
   }
-  // Strip raw command output — keep first sentence only
-  const firstLine = msg.split("\n")[0].slice(0, 120);
-  return { type: "generic", text: firstLine + (msg.length > 120 ? "…" : "") };
+  // Strip raw command output — keep first line only
+  const firstLine = msg.split("\n")[0].slice(0, 100);
+  return { type: "generic", text: firstLine + (msg.length > 100 ? "…" : "") };
 }
 
 // ─── Compare result card ─────────────────────────────────────────────────────
@@ -303,15 +315,24 @@ function CompareCard({ modelKey, result }: { modelKey: ModelKey; result: ModelRe
   return (
     <div className={`bg-white rounded-xl border border-gray-200 border-t-4 ${CARD_ACCENT[m.color]} flex flex-col`}>
       {/* Card header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CARD_BADGE[m.color]}`}>
-          {m.name}
-        </span>
-        {result.status === "done" && result.data?.text && (
-          <button onClick={copyText} className="text-xs text-gray-400 hover:text-indigo-600 transition-colors">
-            {copied ? "Copied!" : "Copy"}
-          </button>
-        )}
+      <div className="px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CARD_BADGE[m.color]}`}>
+            {m.name}
+          </span>
+          {result.status === "done" && result.data?.text && (
+            <button onClick={copyText} className="text-xs text-gray-400 hover:text-indigo-600 transition-colors">
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {MODEL_FEATURES[modelKey].map((f) => (
+            <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded font-medium">
+              {f}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Card body */}
